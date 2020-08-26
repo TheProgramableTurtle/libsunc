@@ -546,8 +546,52 @@ static int libsunc_read_msg(char* msg) {
 	char* buff;
 	FILE* sess_msg_file = fopen(sess_msg_file_path, "r");
 	fgets(buff, 999999, sess_msg_file);
+	msg = new char[128];
+	
+	for (unsigned int i = 0; i < 128; i++) {
+		msg[i] = buff[strlen(buff) - 128 + i];
+	}
 
+	fclose(sess_msg_file);
+	return 0;
 }
+
+static int libsunc_enc_msg(unsigned char* plainText, int plainTextLen, unsigned char* enc, EVP_PKEY **pubKey, unsigned char **encKey, int *encKeyLen, unsigned char *iv) {
+	EVP_CIPHER_CTX *ctx;
+	int encLen;
+	int len;
+
+	ctx = EVP_CIPHER_CTX_new();
+
+	EVP_SealInit(ctx, EVP_aes_256_cbc(), encKey, encKeyLen, iv, pubKey, 1);
+	EVP_SealUpdate(ctx, enc, &len, plainText, plainTextLen);
+
+	encLen += len;
+
+	EVP_SealFinal(ctx, enc + len, &len);
+
+	EVP_CIPHER_CTX_free(ctx);
+
+	return encLen;
+}
+
+static int libsunc_dec_msg(unsigned char* enc, int encLen, unsigned char* plainText, EVP_PKEY* privKey, unsigned char* encKey, int encKeyLen, unsigned char* iv) {
+	EVP_CIPHER_CTX *ctx;
+	int len;
+	int plainTextLen;
+
+	ctx = EVP_CIPHER_CTX_new();
+
+	EVP_OpenInit(ctx, EVP_aes_256_cbc(), encKey, encKeyLen, iv, privKey);
+	EVP_OpenUpdate(ctx, plainText, &len, enc, encLen);
+
+	plainTextLen = len;
+
+	EVP_CIPHER_CTX_free(ctx);
+
+	return plainTextLen;
+}
+
 /*
 static int libsunc_gen_priv_key(EVP_PKEY *key) {
 	EVP_PKEY* pkey;

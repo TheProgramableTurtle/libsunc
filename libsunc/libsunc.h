@@ -50,7 +50,6 @@ static int libsunc_acc_conn(char*);
 
 static int libsunc_write_msg();
 static int libsunc_read_msg();
-static int libsunc_refresh_msg_list();
 
 static int libsunc_enc_msg();
 static int libsunc_dec_msg();
