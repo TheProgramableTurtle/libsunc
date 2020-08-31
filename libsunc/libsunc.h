@@ -1,5 +1,14 @@
 #pragma once
 
+#ifndef LIBSUNC_H
+#define LIBSUNC_H
+
+#ifdef LIBSUNC_EXPORTS
+#define LIBSUNC_API __declspec(dllexport)
+#else
+#define LIBSUNC_API __declspec(dllimport)
+#endif
+
 #include "openssl/crypto.h"
 #include "openssl/ssl.h"
 #include "openssl/ssl2.h"
@@ -17,42 +26,48 @@
 #include <stdlib.h>
 #include <ctime>
 
-static void libsunc_init();
-static void libsunc_uninit();
+extern "C" LIBSUNC_API void libsunc_init();
+extern "C" LIBSUNC_API void libsunc_uninit();
 
-static char* libsunc_auto_hash();
-static char* libsunc_auto_unhash();
+extern "C" LIBSUNC_API int libsunc_auto_hash(unsigned char *, unsigned char *);
+extern "C" LIBSUNC_API int libsunc_auto_unhash(unsigned char *, unsigned char *, unsigned char *);
 
-static int libsunc_read_pub_key(char *, EVP_PKEY);
+extern "C" LIBSUNC_API int libsunc_read_pub_key(char *, EVP_PKEY *);
 
-static int libsunc_gen_uuid();
-static int libsunc_gen_sess_uuid();
-static int libsunc_gen_id_uuid();
+extern "C" LIBSUNC_API int libsunc_gen_uuid(char *);
+extern "C" LIBSUNC_API int libsunc_gen_id_uuid(unsigned char *);
+extern "C" LIBSUNC_API int libsunc_gen_sess_uuid(char *);
 
-static int* libsunc_gen_priv_key();
-static int* libsunc_gen_pub_key();
+extern "C" LIBSUNC_API int libsunc_gen_priv_key(EVP_PKEY *);
+extern "C" LIBSUNC_API int libsunc_gen_pub_key(FILE *, EVP_PKEY *);
 
-static int libsunc_get_sess_folder(char *);
-static int libsunc_create_sess_folder();
-static int libsunc_create_sess_id_file();
-static int libsunc_create_sess_msg_file();
-static int libsunc_write_pub_key();
+extern "C" LIBSUNC_API int libsunc_get_sess_id_folder_c(char *);
+extern "C" LIBSUNC_API int libsunc_get_sess_id_folder_win(LPCWSTR *);
+extern "C" LIBSUNC_API int libsunc_get_sess_folder_c(char *, unsigned char *);
+extern "C" LIBSUNC_API int libsunc_get_sess_folder_win(LPCWSTR *, unsigned char *);
+extern "C" LIBSUNC_API int libsunc_get_sess_id_file_path(char *);
+extern "C" LIBSUNC_API int libsunc_get_sess_msg_file_path(char *, unsigned char *);
+extern "C" LIBSUNC_API int libsunc_get_pub_key_file_path(char*, unsigned char*);
+extern "C" LIBSUNC_API int libsunc_create_sess_id_folder();
+extern "C" LIBSUNC_API int libsunc_create_sess_folder(unsigned char *);
+extern "C" LIBSUNC_API int libsunc_create_sess_id_file();
+extern "C" LIBSUNC_API int libsunc_create_sess_msg_file(unsigned char *);
+extern "C" LIBSUNC_API int libsunc_write_pub_key(EVP_PKEY *, unsigned char *);
 
-static int libsunc_status_set(char);
-static int libsunc_status_open();
-static int libsunc_status_cls();
-static int libsunc_status_idle();
-static int libsunc_status_deb();
-static int libsunc_status_err();
+extern "C" LIBSUNC_API int libsunc_status_set(char);
+extern "C" LIBSUNC_API int libsunc_status_open();
+extern "C" LIBSUNC_API int libsunc_status_cls();
+extern "C" LIBSUNC_API int libsunc_status_idle();
+extern "C" LIBSUNC_API int libsunc_status_deb();
+extern "C" LIBSUNC_API int libsunc_status_err();
 
-static int libsunc_est_conn(char*);
-static int libsunc_acc_conn(char*);
+extern "C" LIBSUNC_API int libsunc_est_conn(unsigned char *, EVP_PKEY *, EVP_PKEY *);
+extern "C" LIBSUNC_API int libsunc_acc_conn(EVP_PKEY *);
 
-static int libsunc_write_msg();
-static int libsunc_read_msg();
+extern "C" LIBSUNC_API int libsunc_write_msg(char *);
+extern "C" LIBSUNC_API int libsunc_read_msg(char *);
 
-static int libsunc_enc_msg();
-static int libsunc_dec_msg();
+extern "C" LIBSUNC_API int libsunc_enc_msg(unsigned char *, int, unsigned char *, EVP_PKEY **, unsigned char ** , int * , unsigned char *);
+extern "C" LIBSUNC_API int libsunc_dec_msg(unsigned char *, int, unsigned char *, EVP_PKEY *, unsigned char *, int, unsigned char *);
 
-
-
+#endif

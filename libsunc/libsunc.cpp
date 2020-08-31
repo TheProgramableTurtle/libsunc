@@ -1,7 +1,7 @@
 #include "libsunc.h"
 #include <stdio.h>
 
-static void libsunc_init() {
+void libsunc_init() {
 	ERR_load_CRYPTO_strings();
 	OpenSSL_add_all_algorithms();
 	OPENSSL_config(NULL);
@@ -10,7 +10,7 @@ static void libsunc_init() {
 	return;
 }
 
-static void libsunc_uninit() {
+void libsunc_uninit() {
 	CONF_modules_unload(1);
 	EVP_cleanup();
 	CRYPTO_cleanup_all_ex_data();
@@ -19,7 +19,7 @@ static void libsunc_uninit() {
 	return;
 }
 
-static unsigned char* libsunc_auto_hash(unsigned char *string) {
+int libsunc_auto_hash(unsigned char *string, unsigned char *hash) {
 	EVP_CIPHER_CTX* ctx;
 	int len;
 	int text_len = strlen((char*)string);
@@ -41,13 +41,15 @@ static unsigned char* libsunc_auto_hash(unsigned char *string) {
 
 	EVP_CIPHER_CTX_free(ctx);
 
-	return ciphertext;
+	hash = ciphertext;
+
+	return 0;
 }
 
-static unsigned char* libsunc_auto_unhash(unsigned char* string, unsigned char* key) {
+int libsunc_auto_unhash(unsigned char* hash, unsigned char* key, unsigned char *string) {
 	EVP_CIPHER_CTX* ctx;
 	int len;
-	int text_len = strlen((char*)string);
+	int text_len = strlen((char*)hash);
 	int ciphertext_len;
 	int plaintext_len;
 	unsigned char plaintext[128];
@@ -58,17 +60,19 @@ static unsigned char* libsunc_auto_unhash(unsigned char* string, unsigned char* 
 	ctx = EVP_CIPHER_CTX_new();
 
 	EVP_DecryptInit_ex(ctx, EVP_aes_256_cbc(), NULL, key, iv);
-	EVP_DecryptUpdate(ctx, plaintext, &len, string, text_len);
+	EVP_DecryptUpdate(ctx, plaintext, &len, hash, text_len);
 	EVP_DecryptFinal_ex(ctx, plaintext + len, &len);
 
 	EVP_CIPHER_CTX_free(ctx);
 
 	plaintext_len += len;
 
-	return plaintext;
+	string = plaintext;
+
+	return 0;
 }
 
-static int libsunc_read_pub_key(char *filepath, EVP_PKEY *key) {
+int libsunc_read_pub_key(char *filepath, EVP_PKEY *key) {
 	FILE *pub_key = fopen(filepath, "r");
 	key = PEM_read_PUBKEY(pub_key, NULL, NULL, NULL);
 	fclose(pub_key);
@@ -76,7 +80,7 @@ static int libsunc_read_pub_key(char *filepath, EVP_PKEY *key) {
 	return 0;
 }
 
-static int libsunc_gen_uuid(char* buff) {
+int libsunc_gen_uuid(char* buff) {
 	union {
 		struct {
 			uint32_t time_low;
@@ -103,23 +107,26 @@ static int libsunc_gen_uuid(char* buff) {
 }
 
 
-static int libsunc_gen_id_uuid(unsigned char *uuid) {
+int libsunc_gen_id_uuid(unsigned char *uuid) {
 	char *username;
+	unsigned char *hash;
 	strcpy(username, getenv("USERNAME"));
 
 	unsigned char *plaintext;
 	memcpy(plaintext, username, strlen(username));
 
-	memcpy(uuid, libsunc_auto_hash(plaintext), sizeof(char[128]));
+	libsunc_auto_hash(plaintext, hash);
+
+	memcpy(uuid, hash, sizeof(char[128]));
 	
 	return 0; // needs implementation
 }
 
-static int libsunc_gen_sess_uuid(char *uuid) {
+int libsunc_gen_sess_uuid(char *uuid) {
 	return libsunc_gen_uuid(uuid);
 }
 
-static int libsunc_gen_priv_key(EVP_PKEY* key) {
+int libsunc_gen_priv_key(EVP_PKEY* key) {
 	/*
 	EVP_PKEY *pkey;
 	EVP_PKEY_CTX *context = EVP_PKEY_CTX_new_id(EVP_PKEY_RSA, NULL)
@@ -138,7 +145,7 @@ static int libsunc_gen_priv_key(EVP_PKEY* key) {
 	return 0;
 }
 
-static int libsunc_gen_pub_key(FILE *fp, EVP_PKEY *key) {
+int libsunc_gen_pub_key(FILE *fp, EVP_PKEY *key) {
 	/*
 	BIO *tempBIO;
 	
@@ -151,7 +158,7 @@ static int libsunc_gen_pub_key(FILE *fp, EVP_PKEY *key) {
 	return 0;
 }
 
-static int libsunc_get_sess_id_folder_c(char *path) {
+int libsunc_get_sess_id_folder_c(char *path) {
 	unsigned char *uuid;
 	libsunc_gen_id_uuid(uuid);
 
@@ -165,7 +172,7 @@ static int libsunc_get_sess_id_folder_c(char *path) {
 	return 0;
 }
 
-static int libsunc_get_sess_id_folder_win(LPCWSTR* path) {
+int libsunc_get_sess_id_folder_win(LPCWSTR* path) {
 	unsigned char *uuid;
 	char *uuid_win;
 
@@ -180,7 +187,7 @@ static int libsunc_get_sess_id_folder_win(LPCWSTR* path) {
 
 }
 
-static int libsunc_get_sess_folder_c(char* path, unsigned char* uuid) {
+int libsunc_get_sess_folder_c(char* path, unsigned char* uuid) {
 	char* buff;
 	strcat(buff, "S:\\sunc-sess");
 	strcat(buff, (char*)uuid);
@@ -191,7 +198,7 @@ static int libsunc_get_sess_folder_c(char* path, unsigned char* uuid) {
 	return 0;
 }
 
-static int libsunc_get_sess_folder_win(LPCWSTR* path, unsigned char* uuid) {
+int libsunc_get_sess_folder_win(LPCWSTR* path, unsigned char* uuid) {
 	char* uuid_win;
 	strcpy(uuid_win, (char*)uuid);
 
@@ -203,7 +210,7 @@ static int libsunc_get_sess_folder_win(LPCWSTR* path, unsigned char* uuid) {
 
 }
 
-static int libsunc_get_sess_id_file_path(char *path) {
+int libsunc_get_sess_id_file_path(char *path) {
 	char *dir;
 	unsigned char* uuid;
 	char *uuid_win;
@@ -221,7 +228,7 @@ static int libsunc_get_sess_id_file_path(char *path) {
 	return 0;
 }
 
-static int libsunc_get_sess_msg_file_path(char* path, unsigned char *uuid) {
+int libsunc_get_sess_msg_file_path(char* path, unsigned char *uuid) {
 	char *dir;
 	char *uuid_win;
 
@@ -237,7 +244,7 @@ static int libsunc_get_sess_msg_file_path(char* path, unsigned char *uuid) {
 	return 0;
 }
 
-static int libsunc_get_pub_key_file_path(char* path, unsigned char *uuid) {
+int libsunc_get_pub_key_file_path(char* path, unsigned char *uuid) {
 	char* dir;
 	char* uuid_win;
 
@@ -253,7 +260,7 @@ static int libsunc_get_pub_key_file_path(char* path, unsigned char *uuid) {
 	return 0;
 }
 
-static int libsunc_create_sess_id_folder() {
+int libsunc_create_sess_id_folder() {
 	/*
 	unsigned char *uuid; 
 	libsunc_gen_id_uuid(uuid);
@@ -268,7 +275,7 @@ static int libsunc_create_sess_id_folder() {
 	return 0;
 }
 
-static int libsunc_create_sess_folder(unsigned char* uuid) {
+int libsunc_create_sess_folder(unsigned char* uuid) {
 	LPCWSTR *lpPathName;
 	libsunc_get_sess_folder_win(lpPathName, uuid);
 
@@ -278,7 +285,7 @@ static int libsunc_create_sess_folder(unsigned char* uuid) {
 	return 0;
 }
 
-static int libsunc_create_sess_id_file() {
+int libsunc_create_sess_id_file() {
 	/*
 	unsigned char* uuid;
 	unsigned char* filename;
@@ -306,7 +313,7 @@ static int libsunc_create_sess_id_file() {
 	return 0;
 }
 
-static int libsunc_create_sess_msg_file(unsigned char *uuid) {
+int libsunc_create_sess_msg_file(unsigned char *uuid) {
 	/*
 	unsigned char* uuid;
 	unsigned char* filename;
@@ -335,7 +342,7 @@ static int libsunc_create_sess_msg_file(unsigned char *uuid) {
 	return 0;
 }
 
-static int libsunc_write_pub_key(EVP_PKEY *key, unsigned char *uuid) {
+int libsunc_write_pub_key(EVP_PKEY *key, unsigned char *uuid) {
 	/*
 	unsigned char* uuid;
 	unsigned char* filename;
@@ -365,7 +372,7 @@ static int libsunc_write_pub_key(EVP_PKEY *key, unsigned char *uuid) {
 	return 0;
 }
 
-static int libsunc_status_set(char status) {
+int libsunc_status_set(char status) {
 	char *filePath;
 	libsunc_get_sess_id_file_path(filePath);
 
@@ -402,32 +409,32 @@ static int libsunc_status_set(char status) {
 	return 0;
 }
 
-static int libsunc_status_open() {
+int libsunc_status_open() {
 	libsunc_status_set('o');
 	return 0;
 }
 
-static int libsunc_status_cls() {
+int libsunc_status_cls() {
 	libsunc_status_set('c');
 	return 0;
 }
 
-static int libsunc_status_idle() {
+int libsunc_status_idle() {
 	libsunc_status_set('i');
 	return 0;
 }
 
-static int libsunc_status_deb() {
+int libsunc_status_deb() {
 	libsunc_status_set('d');
 	return 0;
 }
 
-static int libsunc_status_err() {
+int libsunc_status_err() {
 	libsunc_status_set('e');
 	return 0;
 }
 
-static int libsunc_est_conn(unsigned char *client, EVP_PKEY *key, EVP_PKEY *clientKey) {
+int libsunc_est_conn(unsigned char *client, EVP_PKEY *key, EVP_PKEY *clientKey) {
 	unsigned char* clientHash = libsunc_auto_hash(client);
 	libsunc_create_sess_folder(clientHash);
 	
@@ -470,7 +477,7 @@ static int libsunc_est_conn(unsigned char *client, EVP_PKEY *key, EVP_PKEY *clie
 	return 0;
 }
 
-static int libsunc_acc_conn(EVP_PKEY *key) {
+int libsunc_acc_conn(EVP_PKEY *key) {
 	unsigned char *uuid;
 	libsunc_gen_id_uuid(uuid);
 
@@ -517,7 +524,7 @@ static int libsunc_acc_conn(EVP_PKEY *key) {
 	return 0;
 }
 
-static int libsunc_write_msg(char *msg) {
+int libsunc_write_msg(char *msg) {
 	if (strlen(msg) != 256) {
 		printf("Message not correct length\n");
 		return 1;
@@ -536,7 +543,7 @@ static int libsunc_write_msg(char *msg) {
 	return 0;
 }
 
-static int libsunc_read_msg(char* msg) {
+int libsunc_read_msg(char* msg) {
 	unsigned char* uuid;
 	libsunc_gen_id_uuid(uuid);
 
@@ -556,7 +563,7 @@ static int libsunc_read_msg(char* msg) {
 	return 0;
 }
 
-static int libsunc_enc_msg(unsigned char* plainText, int plainTextLen, unsigned char* enc, EVP_PKEY **pubKey, unsigned char **encKey, int *encKeyLen, unsigned char *iv) {
+int libsunc_enc_msg(unsigned char* plainText, int plainTextLen, unsigned char* enc, EVP_PKEY **pubKey, unsigned char **encKey, int *encKeyLen, unsigned char *iv) {
 	EVP_CIPHER_CTX *ctx;
 	int encLen;
 	int len;
@@ -575,7 +582,7 @@ static int libsunc_enc_msg(unsigned char* plainText, int plainTextLen, unsigned 
 	return encLen;
 }
 
-static int libsunc_dec_msg(unsigned char* enc, int encLen, unsigned char* plainText, EVP_PKEY* privKey, unsigned char* encKey, int encKeyLen, unsigned char* iv) {
+int libsunc_dec_msg(unsigned char* enc, int encLen, unsigned char* plainText, EVP_PKEY* privKey, unsigned char* encKey, int encKeyLen, unsigned char* iv) {
 	EVP_CIPHER_CTX *ctx;
 	int len;
 	int plainTextLen;
